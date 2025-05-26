@@ -1,0 +1,36 @@
+name: Build on Linux
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-gcc:
+    name: Build with GCC
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y g++ cmake
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_CXX_COMPILER=g++
+      - name: Build
+        run: cmake --build build
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+  build-clang:
+    name: Build with Clang
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y clang cmake
+      - name: Configure
+        run: cmake -S . -B build-clang -DCMAKE_CXX_COMPILER=clang++
+      - name: Build
+        run: cmake --build build-clang
+      - name: Run tests
+        run: ctest --test-dir build-clang --output-on-failure

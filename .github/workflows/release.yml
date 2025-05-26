@@ -1,0 +1,98 @@
+name: Release Bridge Demo
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y cmake rpm dpkg-dev
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build GoogleTest
+        run: cmake --build build/_deps/googletest-build
+      - name: Build Bridge Demo
+        run: cmake --build build --target bridge_demo --config Release
+      - name: Build Tests
+        run: cmake --build build --target bridge_tests --config Release
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Install
+        run: cmake --install build
+      - name: Package
+        run: cd build && cpack -G DEB && cpack -G RPM && cpack -G ZIP
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/*.deb
+            build/*.rpm
+            build/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: choco install cmake -y
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build GoogleTest
+        run: cmake --build build/_deps/googletest-build --config Release
+      - name: Build Bridge Demo
+        run: cmake --build build --target bridge_demo --config Release
+      - name: Build Tests
+        run: cmake --build build --target bridge_tests --config Release
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Install
+        run: cmake --install build
+      - name: Package
+        run: |
+          cd build
+          cpack -G WIX || cpack -G NSIS
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.msi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install CMake
+        run: brew install cmake
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build GoogleTest
+        run: cmake --build build/_deps/googletest-build
+      - name: Build Bridge Demo
+        run: cmake --build build --target bridge_demo --config Release
+      - name: Build Tests
+        run: cmake --build build --target bridge_tests --config Release
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure
+      - name: Install
+        run: cmake --install build
+      - name: Package
+        run: |
+          cd build
+          cpack -G DragNDrop
+      - name: Upload
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
